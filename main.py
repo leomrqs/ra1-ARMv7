@@ -552,10 +552,44 @@ def _gerar_asm_nodo(asm, nodo, ctx):
             _emitir_potencia(asm, ctx)
 
 
+# --- executarExpressao -----------------------------------
+
+def executarExpressao(asm, tokens_linha, idx_slot, num_linha, ctx):
+    """Processa uma expressão RPN completa (uma linha do arquivo).
+
+    Responsabilidades:
+      - Parsear os tokens da linha em uma AST (árvore de nodos)
+      - Caminhar a AST gerando instruções VFP (via _gerar_asm_nodo)
+      - Gerenciar o mapa de variáveis e o histórico RES
+      - Armazenar o resultado no array 'resultados' (para futuro RES)
+
+    Args:
+        asm:          Lista de linhas Assembly sendo construída
+        tokens_linha: Lista de tokens pertencentes a esta linha
+        idx_slot:     Índice sequencial da linha (0-based, para offset RES)
+        num_linha:    Número original da linha no arquivo fonte
+        ctx:          Contexto compartilhado (rótulos, contador de labels, etc.)
+    """
+    ctx['idx_linha'] = idx_slot
+
+    expressao_display = " ".join(tok.valor for tok in tokens_linha)
+    asm.append(f"")
+    asm.append(f"@ --- Linha {num_linha}: {expressao_display} ---")
+
+    # Parsear a expressão: tokens planos -> AST (nodos recursivos)
+    nodo, _ = _parsear_nodo(tokens_linha, 0)
+
+    # Caminhar a AST emitindo instruções ARM/VFP
+    _gerar_asm_nodo(asm, nodo, ctx)
+
+    # Armazenar resultado no array para referências futuras (N RES)
+    _emitir_armazenar_resultado(asm, num_linha, idx_slot)
+
+
 # --- Geração da seção .text ------------------------------------------------
 
 def _gerar_secao_text(asm, grupos, rotulos):
-    """Gera a seção .text processando cada linha via parser + AST walker."""
+    """Gera a seção .text chamando executarExpressao para cada linha."""
     asm.append("@ Seção de código (.text)")
     asm.append(".section .text")
     asm.append(".global _start")
@@ -568,15 +602,7 @@ def _gerar_secao_text(asm, grupos, rotulos):
     }
 
     for idx_slot, (num_linha, tokens_linha) in enumerate(grupos):
-        ctx['idx_linha'] = idx_slot
-
-        expressao_display = " ".join(tok.valor for tok in tokens_linha)
-        asm.append(f"")
-        asm.append(f"@ --- Linha {num_linha}: {expressao_display} ---")
-
-        nodo, _ = _parsear_nodo(tokens_linha, 0)
-        _gerar_asm_nodo(asm, nodo, ctx)
-        _emitir_armazenar_resultado(asm, num_linha, idx_slot)
+        executarExpressao(asm, tokens_linha, idx_slot, num_linha, ctx)
 
     asm.append(f"")
     asm.append(f"@ --- Fim do programa ---")
@@ -661,14 +687,184 @@ def exibirResumoAssembly(codigo_asm, caminho):
     print()
 
 
+#  exibirResultados
+
+
+def exibirResultados(tokens, codigo_asm, caminho_asm):
+    """Exibe todos os resultados finais do compilador.
+
+    Consolida a apresentação dos tokens gerados pelo analisador léxico e
+    o resumo estatístico do Assembly gerado, incluindo contagem de instruções
+    VFP, variáveis declaradas e expressões processadas.
+
+    Args:
+        tokens:      Lista de objetos Token (saída do parseExpressao)
+        codigo_asm:  String com o código Assembly completo
+        caminho_asm: Caminho do arquivo .s gerado
+    """
+    exibirTokens(tokens)
+    exibirResumoAssembly(codigo_asm, caminho_asm)
+
+
+#  estar_analisador_lexico (item 26.3)
+def testar_analisador_lexico():
+    """Testes automatizados do Analisador Léxico (AFD).
+
+    Injeta strings fixas no parseExpressao para validar que o autômato:
+      - Reconhece corretamente todos os tipos de token
+      - Aplica Maximal Munch (/ vs //)
+      - Rejeita entrada inválida com ErroLexico
+      - Rastreia posição (linha, coluna) corretamente
+    """
+    testes_ok   = 0
+    testes_erro = 0
+
+    def _verificar(descricao, entrada, esperado_tipos, esperado_valores=None):
+        """Executa um caso de teste e verifica tipos (e opcionalmente valores)."""
+        nonlocal testes_ok, testes_erro
+        try:
+            tokens = parseExpressao(entrada)
+            tipos  = [t.tipo for t in tokens if t.tipo != TIPO_EOF]
+            if tipos != esperado_tipos:
+                print(f"  FALHOU: {descricao}")
+                print(f"    Esperado: {esperado_tipos}")
+                print(f"    Obtido:   {tipos}")
+                testes_erro += 1
+                return
+            if esperado_valores is not None:
+                valores = [t.valor for t in tokens if t.tipo != TIPO_EOF]
+                if valores != esperado_valores:
+                    print(f"  FALHOU: {descricao}")
+                    print(f"    Valores esperados: {esperado_valores}")
+                    print(f"    Valores obtidos:   {valores}")
+                    testes_erro += 1
+                    return
+            print(f"  OK: {descricao}")
+            testes_ok += 1
+        except ErroLexico as e:
+            print(f"  FALHOU: {descricao} (errou com: {e})")
+            testes_erro += 1
+
+    def _verificar_erro(descricao, entrada):
+        """Verifica que a entrada provoca um ErroLexico."""
+        nonlocal testes_ok, testes_erro
+        try:
+            parseExpressao(entrada)
+            print(f"  FALHOU: {descricao} (deveria ter dado erro!)")
+            testes_erro += 1
+        except ErroLexico:
+            print(f"  OK: {descricao} (erro léxico detectado corretamente)")
+            testes_ok += 1
+
+    print()
+    print("=" * 65)
+    print("  TESTES DO ANALISADOR LÉXICO (AFD)")
+    print("=" * 65)
+
+    # --- Testes de aceitação (entradas válidas) ---
+    print("\n  Testes de aceitação:")
+
+    _verificar("Expressão básica (3.14 2.0 +)",
+        "(3.14 2.0 +)",
+        [TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR, TIPO_FECHA_PAREN],
+        ["(", "3.14", "2.0", "+", ")"])
+
+    _verificar("Número inteiro sem ponto (42)",
+        "(42 RES)",
+        [TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_IDENTIFICADOR, TIPO_FECHA_PAREN],
+        ["(", "42", "RES", ")"])
+
+    _verificar("Maximal Munch: / (divisão real)",
+        "(10.0 3.0 /)",
+        [TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR, TIPO_FECHA_PAREN],
+        ["(", "10.0", "3.0", "/", ")"])
+
+    _verificar("Maximal Munch: // (divisão inteira)",
+        "(10.0 3.0 //)",
+        [TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR, TIPO_FECHA_PAREN],
+        ["(", "10.0", "3.0", "//", ")"])
+
+    _verificar("Todos os operadores",
+        "(1.0 2.0 +)(1.0 2.0 -)(1.0 2.0 *)(1.0 2.0 /)(1.0 2.0 //)(1.0 2.0 %)(1.0 2.0 ^)",
+        [TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR, TIPO_FECHA_PAREN] * 7,
+        ["(","1.0","2.0","+",")",
+         "(","1.0","2.0","-",")",
+         "(","1.0","2.0","*",")",
+         "(","1.0","2.0","/",")",
+         "(","1.0","2.0","//",")",
+         "(","1.0","2.0","%",")",
+         "(","1.0","2.0","^",")"])
+
+    _verificar("Identificador longo (TEMPORARIO)",
+        "(TEMPORARIO)",
+        [TIPO_ABRE_PAREN, TIPO_IDENTIFICADOR, TIPO_FECHA_PAREN],
+        ["(", "TEMPORARIO", ")"])
+
+    _verificar("Aninhamento profundo",
+        "((3.0 2.0 +) (4.0 1.0 -) *)",
+        [TIPO_ABRE_PAREN, TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR,
+         TIPO_FECHA_PAREN, TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR,
+         TIPO_FECHA_PAREN, TIPO_OPERADOR, TIPO_FECHA_PAREN])
+
+    _verificar("Número com decimal < 1 (0.5)",
+        "(0.5 2.0 +)",
+        [TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR, TIPO_FECHA_PAREN],
+        ["(", "0.5", "2.0", "+", ")"])
+
+    _verificar("Posição rastreada (linha e coluna)",
+        "(3.14 2.0 +)",
+        [TIPO_ABRE_PAREN, TIPO_NUMERO, TIPO_NUMERO, TIPO_OPERADOR, TIPO_FECHA_PAREN])
+    # Verificação extra de posição no último teste
+    t = parseExpressao("(3.14 2.0 +)")
+    assert t[0].coluna == 1, "Parêntese deve estar na coluna 1"
+    assert t[1].coluna == 2, "3.14 deve estar na coluna 2"
+    assert t[2].coluna == 7, "2.0 deve estar na coluna 7"
+
+    # --- Testes de rejeição (entradas inválidas) ---
+    print("\n  Testes de rejeição:")
+
+    _verificar_erro("Caractere inválido (&)",
+        "(3.0 2.0 &)")
+
+    _verificar_erro("Ponto decimal sem fração (3.)",
+        "(3. 2.0 +)")
+
+    _verificar_erro("Caractere minúsculo (abc)",
+        "(abc)")
+
+    _verificar_erro("Caractere especial (#)",
+        "(3.0 # 2.0)")
+
+    _verificar_erro("Arroba (@)",
+        "(@)")
+
+    # --- Resumo ---
+    total = testes_ok + testes_erro
+    print(f"\n  Resultado: {testes_ok}/{total} testes passaram", end="")
+    if testes_erro > 0:
+        print(f" ({testes_erro} falharam)")
+    else:
+        print(" — TODOS OK")
+    print("=" * 65)
+    print()
+
+    return testes_erro == 0
+
+
 #  PONTO DE ENTRADA
 
 def main():
     """Função principal."""
+    # Modo de teste: python compilador_rpn.py --teste
+    if len(sys.argv) >= 2 and sys.argv[1] == '--teste':
+        sucesso = testar_analisador_lexico()
+        sys.exit(0 if sucesso else 1)
+
     if len(sys.argv) < 2:
         print("╔══════════════════════════════════════════════════════╗")
         print("║  Compilador RPN → ARMv7 Assembly                    ║")
         print("║  Uso: python compilador_rpn.py <arquivo_entrada.txt>║")
+        print("║       python compilador_rpn.py --teste              ║")
         print("║  Ex:  python compilador_rpn.py teste1.txt           ║")
         print("╚══════════════════════════════════════════════════════╝")
         sys.exit(1)
@@ -700,8 +896,8 @@ def main():
         salvarAssembly(codigo_asm, caminho_asm)
         print(f"      → {caminho_asm}")
 
-        exibirTokens(tokens)
-        exibirResumoAssembly(codigo_asm, caminho_asm)
+        # Função obrigatória: exibir todos os resultados
+        exibirResultados(tokens, codigo_asm, caminho_asm)
 
         print("Compilação concluída com sucesso.")
         print(f"    Copie '{caminho_asm}' para o CPUlator ARMv7 DE1-SoC")
