@@ -2,6 +2,7 @@
 """
 ==============================================================================
   Compilador RPN → ARMv7 Assembly (IEEE 754 / VFP)
+  Analisador Léxico (AFD) + Parser Recursivo + Gerador de Código
 ==============================================================================
 """
 
@@ -69,24 +70,23 @@ def _eh_digito(ch: str) -> bool:
     """Retorna True se ch ∈ [0-9]."""
     return '0' <= ch <= '9'
 
-
 def _eh_letra_maiuscula(ch: str) -> bool:
     """Retorna True se ch ∈ [A-Z]."""
     return 'A' <= ch <= 'Z'
-
 
 def _eh_espaco(ch: str) -> bool:
     """Retorna True se ch é espaço, tab, ou carriage return."""
     return ch == ' ' or ch == '\t' or ch == '\r'
 
 
+# ============================================================================
 #  ESTADOS DO AFD — Cada estado é uma função isolada
+# ============================================================================
 
 def estado_inicial(fonte: str, pos: int, linha: int, coluna: int):
     """Estado q0 do AFD — ponto de entrada para cada ciclo de reconhecimento."""
     tamanho = len(fonte)
 
-    # Consumir espaços e quebras de linha
     while pos < tamanho:
         ch = fonte[pos]
         if ch == '\n':
@@ -99,40 +99,24 @@ def estado_inicial(fonte: str, pos: int, linha: int, coluna: int):
         else:
             break
 
-    # Verificar fim da entrada (EOF)
     if pos >= tamanho:
         return (Token(TIPO_EOF, "", linha, coluna), pos, linha, coluna)
 
     ch = fonte[pos]
 
-    # Parêntese de abertura
     if ch == '(':
-        token = Token(TIPO_ABRE_PAREN, "(", linha, coluna)
-        return (token, pos + 1, linha, coluna + 1)
-
-    # Parêntese de fechamento
+        return (Token(TIPO_ABRE_PAREN, "(", linha, coluna), pos + 1, linha, coluna + 1)
     if ch == ')':
-        token = Token(TIPO_FECHA_PAREN, ")", linha, coluna)
-        return (token, pos + 1, linha, coluna + 1)
-
-    # Dígito -> transição para estado_inteiro
+        return (Token(TIPO_FECHA_PAREN, ")", linha, coluna), pos + 1, linha, coluna + 1)
     if _eh_digito(ch):
         return estado_inteiro(fonte, pos, linha, coluna)
-
-    # Operadores de caractere único: + - * % ^
     if ch == '+' or ch == '-' or ch == '*' or ch == '%' or ch == '^':
-        token = Token(TIPO_OPERADOR, ch, linha, coluna)
-        return (token, pos + 1, linha, coluna + 1)
-
-    # Barra -> transição para estado_divisao (Maximal Munch: / vs //)
+        return (Token(TIPO_OPERADOR, ch, linha, coluna), pos + 1, linha, coluna + 1)
     if ch == '/':
         return estado_divisao(fonte, pos, linha, coluna)
-
-    # Letra maiúscula -> transição para estado_identificador
     if _eh_letra_maiuscula(ch):
         return estado_identificador(fonte, pos, linha, coluna)
 
-    # Caractere não reconhecido -> erro léxico
     raise ErroLexico(f"Caractere inesperado: '{ch}' (ord={ord(ch)})", linha, coluna)
 
 
@@ -146,13 +130,11 @@ def estado_inteiro(fonte: str, pos: int, linha: int, coluna: int):
         pos    += 1
         coluna += 1
 
-    # Transição para parte fracionária?
     if pos < tamanho and fonte[pos] == '.':
         return estado_ponto(fonte, pos, linha, coluna, inicio_pos, inicio_col)
 
     lexema = fonte[inicio_pos:pos]
-    token  = Token(TIPO_NUMERO, lexema, linha, inicio_col)
-    return (token, pos, linha, coluna)
+    return (Token(TIPO_NUMERO, lexema, linha, inicio_col), pos, linha, coluna)
 
 
 def estado_ponto(fonte: str, pos: int, linha: int, coluna: int,
@@ -160,13 +142,11 @@ def estado_ponto(fonte: str, pos: int, linha: int, coluna: int,
     """Estado q2 — Ponto decimal encontrado após parte inteira."""
     pos    += 1
     coluna += 1
-
     if pos >= len(fonte) or not _eh_digito(fonte[pos]):
         raise ErroLexico(
             "Esperado dígito após ponto decimal (ex: '3.0', não '3.')",
             linha, coluna
         )
-
     return estado_real(fonte, pos, linha, coluna, inicio_pos, inicio_col)
 
 
@@ -174,14 +154,11 @@ def estado_real(fonte: str, pos: int, linha: int, coluna: int,
                 inicio_pos: int, inicio_col: int):
     """Estado q3 — Leitura da parte fracionária de um número real."""
     tamanho = len(fonte)
-
     while pos < tamanho and _eh_digito(fonte[pos]):
         pos    += 1
         coluna += 1
-
     lexema = fonte[inicio_pos:pos]
-    token  = Token(TIPO_NUMERO, lexema, linha, inicio_col)
-    return (token, pos, linha, coluna)
+    return (Token(TIPO_NUMERO, lexema, linha, inicio_col), pos, linha, coluna)
 
 
 def estado_divisao(fonte: str, pos: int, linha: int, coluna: int):
@@ -189,13 +166,9 @@ def estado_divisao(fonte: str, pos: int, linha: int, coluna: int):
     inicio_col = coluna
     pos    += 1
     coluna += 1
-
     if pos < len(fonte) and fonte[pos] == '/':
-        token = Token(TIPO_OPERADOR, "//", linha, inicio_col)
-        return (token, pos + 1, linha, coluna + 1)
-
-    token = Token(TIPO_OPERADOR, "/", linha, inicio_col)
-    return (token, pos, linha, coluna)
+        return (Token(TIPO_OPERADOR, "//", linha, inicio_col), pos + 1, linha, coluna + 1)
+    return (Token(TIPO_OPERADOR, "/", linha, inicio_col), pos, linha, coluna)
 
 
 def estado_identificador(fonte: str, pos: int, linha: int, coluna: int):
@@ -203,14 +176,11 @@ def estado_identificador(fonte: str, pos: int, linha: int, coluna: int):
     inicio_pos = pos
     inicio_col = coluna
     tamanho    = len(fonte)
-
     while pos < tamanho and _eh_letra_maiuscula(fonte[pos]):
         pos    += 1
         coluna += 1
-
     lexema = fonte[inicio_pos:pos]
-    token  = Token(TIPO_IDENTIFICADOR, lexema, linha, inicio_col)
-    return (token, pos, linha, coluna)
+    return (Token(TIPO_IDENTIFICADOR, lexema, linha, inicio_col), pos, linha, coluna)
 
 
 #  ANALISADOR LÉXICO — Orquestrador do AFD
@@ -221,31 +191,27 @@ def parseExpressao(fonte: str) -> list:
     pos    = 0
     linha  = 1
     coluna = 1
-
     while True:
         resultado = estado_inicial(fonte, pos, linha, coluna)
         token, pos, linha, coluna = resultado
         tokens.append(token)
-
         if token.tipo == TIPO_EOF:
             break
-
     return tokens
 
 
+# ============================================================================
 #  FUNÇÕES DE I/O
+# ============================================================================
 
 def lerArquivo(caminho: str) -> str:
     """Lê o arquivo de entrada contendo expressões RPN."""
     if not os.path.isfile(caminho):
         raise FileNotFoundError(f"Arquivo não encontrado: '{caminho}'")
-
     with open(caminho, 'r', encoding='utf-8') as f:
         conteudo = f.read()
-
     if not conteudo.strip():
         raise ValueError(f"Arquivo vazio: '{caminho}'")
-
     return conteudo
 
 
@@ -259,15 +225,12 @@ def salvarTokens(tokens: list, caminho_json: str, caminho_txt: str):
         f.write("=" * 65 + "\n")
         f.write("  FLUXO DE TOKENS — Analisador Léxico (AFD)\n")
         f.write("=" * 65 + "\n\n")
-
         f.write(f"{'#':<6}{'TIPO':<20}{'LEXEMA':<15}{'POSICAO':<12}\n")
         f.write("-" * 53 + "\n")
-
         for i, t in enumerate(tokens):
             pos_str = f"L{t.linha}:C{t.coluna}"
             valor_display = t.valor if t.valor else "(vazio)"
             f.write(f"{i:<6}{t.tipo:<20}{valor_display:<15}{pos_str:<12}\n")
-
         f.write("-" * 53 + "\n")
         f.write(f"Total de tokens: {len(tokens)}\n")
 
@@ -281,32 +244,79 @@ def exibirTokens(tokens: list):
     print()
     print(f"{'#':<6}{'TIPO':<20}{'LEXEMA':<15}{'POSICAO':<12}")
     print("-" * 53)
-
     for i, t in enumerate(tokens):
         pos_str = f"L{t.linha}:C{t.coluna}"
         valor_display = t.valor if t.valor else "(vazio)"
         print(f"{i:<6}{t.tipo:<20}{valor_display:<15}{pos_str:<12}")
-
     print("-" * 53)
     print(f"Total de tokens: {len(tokens)}")
     print()
 
 
-# 
-#
+# ============================================================================
+#  PARSER RECURSIVO — Converte tokens planos em AST
+# ============================================================================
+#  Padrões: (A B op) → OP_BIN | (V NOME) → ESCREVER_VAR
+#           (NOME)   → LER_VAR | (N RES)  → LER_RES
+
+def _parsear_nodo(tokens, pos):
+    """Parse recursivo de um nodo da expressão RPN parentesizada."""
+    tok = tokens[pos]
+
+    if tok.tipo != TIPO_ABRE_PAREN:
+        return tok, pos + 1
+
+    pos += 1  # pular '('
+    filhos = []
+    while tokens[pos].tipo != TIPO_FECHA_PAREN:
+        if tokens[pos].tipo == TIPO_ABRE_PAREN:
+            filho, pos = _parsear_nodo(tokens, pos)
+            filhos.append(filho)
+        else:
+            filhos.append(tokens[pos])
+            pos += 1
+    pos += 1  # pular ')'
+
+    return _classificar_nodo(filhos), pos
+
+
+def _classificar_nodo(filhos):
+    """Classifica um nodo da AST baseado no padrão dos filhos."""
+    n = len(filhos)
+
+    # (VARNAME) → leitura de variável
+    if n == 1:
+        f = filhos[0]
+        if isinstance(f, Token) and f.tipo == TIPO_IDENTIFICADOR and f.valor != 'RES':
+            return {'tipo': 'LER_VAR', 'nome': f.valor}
+        return f
+
+    # 2 filhos: (V VARNAME) ou (N RES)
+    if n == 2:
+        primeiro, segundo = filhos
+        if isinstance(segundo, Token) and segundo.tipo == TIPO_IDENTIFICADOR:
+            if segundo.valor == 'RES':
+                return {'tipo': 'LER_RES', 'n_valor': primeiro}
+            else:
+                return {'tipo': 'ESCREVER_VAR', 'nome': segundo.valor, 'expr': primeiro}
+
+    # 3 filhos: (A B op) → operação binária
+    if n == 3:
+        esq, dir_, op = filhos
+        if isinstance(op, Token) and op.tipo == TIPO_OPERADOR:
+            return {'tipo': 'OP_BIN', 'esq': esq, 'dir': dir_, 'op': op.valor}
+
+    return {'tipo': 'DESCONHECIDO', 'filhos': filhos}
+
+
+# ============================================================================
+#  GERADOR DE ASSEMBLY ARMv7 (IEEE 754 / VFP 64-bit)
+# ============================================================================
 #  Pilha RPN no ARM:
 #    NUMERO  -> ldr r0, =label / vldr.f64 d0, [r0] / vpush {d0}
-#    OP +    -> vpop {d1} / vpop {d0} / vadd.f64 d0, d0, d1 / vpush {d0}
-#    OP -    -> vpop {d1} / vpop {d0} / vsub.f64 d0, d0, d1 / vpush {d0}
-#    OP *    -> vpop {d1} / vpop {d0} / vmul.f64 d0, d0, d1 / vpush {d0}
-#    OP /    -> vpop {d1} / vpop {d0} / vdiv.f64 d0, d0, d1 / vpush {d0}
-#
-#  Ordem dos operandos (CRÍTICO para - e /):
-#    RPN (A B -) -> push A, push B
-#    vpop {d1} = B (topo)    vpop {d0} = A (segundo)
-#    vsub.f64 d0, d0, d1  ->  d0 = A - B
+#    OP +,-  -> vpop {d1}(B) / vpop {d0}(A) / vOP d0,d0,d1 / vpush {d0}
+#  Ordem: vpop d1=B(topo), vpop d0=A(segundo) -> d0 = A op B
 
-# Mapeamento: operador RPN -> instrução VFP 64-bit
 _MAPA_INSTRUCOES_VFP = {
     '+': ('vadd.f64', 'soma'),
     '-': ('vsub.f64', 'subtração'),
@@ -314,47 +324,77 @@ _MAPA_INSTRUCOES_VFP = {
     '/': ('vdiv.f64', 'divisão real'),
 }
 
-# Operadores
-_OPERADORES_COMMIT3 = {
-    '//': 'divisão inteira',
-    '%':  'resto / módulo',
-    '^':  'potência',
-}
+
+def _coletar_constantes(tokens):
+    """Coleta todos os tokens NUMERO e gera rótulos para a seção .data."""
+    rotulos    = {}
+    constantes = []
+    idx        = 0
+    for tok in tokens:
+        if tok.tipo == TIPO_NUMERO:
+            chave = (tok.linha, tok.coluna)
+            rotulo = f"const_{idx}"
+            rotulos[chave] = rotulo
+            valor = tok.valor if '.' in tok.valor else tok.valor + ".0"
+            constantes.append((rotulo, valor))
+            idx += 1
+    return rotulos, constantes
 
 
-def _agrupar_por_linha(tokens: list) -> list:
+def _coletar_variaveis(tokens):
+    """Coleta nomes de variáveis únicas (identificadores exceto RES)."""
+    variaveis = []
+    visto     = set()
+    for tok in tokens:
+        if tok.tipo == TIPO_IDENTIFICADOR and tok.valor != 'RES':
+            if tok.valor not in visto:
+                variaveis.append(tok.valor)
+                visto.add(tok.valor)
+    return variaveis
+
+
+def _agrupar_por_linha(tokens):
     """Agrupa tokens por número de linha da fonte original."""
-    grupos  = {}
-    ordem   = []
-
-    for i, tok in enumerate(tokens):
+    grupos = {}
+    ordem  = []
+    for tok in tokens:
         if tok.tipo == TIPO_EOF:
             continue
         if tok.linha not in grupos:
             grupos[tok.linha] = []
             ordem.append(tok.linha)
-        grupos[tok.linha].append((i, tok))
-
+        grupos[tok.linha].append(tok)
     return [(nl, grupos[nl]) for nl in ordem]
 
 
-def _gerar_secao_data(asm: list, constantes: list, num_linhas: int):
-    """Gera a seção .data (constantes IEEE 754 double + array de resultados)."""
+# --- Geração da seção .data ------------------------------------------------
+
+def _gerar_secao_data(asm, constantes, variaveis, num_linhas):
+    """Gera a seção .data (constantes + variáveis + array de resultados)."""
     asm.append("@ Seção de dados (.data)")
-    asm.append("@ Constantes IEEE 754 double-precision (64 bits)")
     asm.append(".section .data")
     asm.append("    .align 3")
     asm.append("")
 
-    # Constantes numéricas
-    asm.append("@ --- Constantes numéricas (geradas pelo compilador) ---")
+    asm.append("@ --- Constantes numéricas (IEEE 754 double) ---")
     for rotulo, valor in constantes:
         asm.append(f"{rotulo}:")
         asm.append(f"    .double {valor}")
     asm.append("")
 
-    # Array de resultados (infraestrutura para RES)
-    asm.append("@ --- Array de resultados por linha (infraestrutura para RES) ---")
+    asm.append("@ --- Constante utilitária ---")
+    asm.append("const_um:")
+    asm.append("    .double 1.0")
+    asm.append("")
+
+    if variaveis:
+        asm.append("@ --- Variáveis de memória (inicializadas em 0.0) ---")
+        for nome in variaveis:
+            asm.append(f"var_{nome}:")
+            asm.append(f"    .double 0.0")
+        asm.append("")
+
+    asm.append("@ --- Array de resultados por linha (para RES) ---")
     asm.append("resultados:")
     asm.append(f"    .space {num_linhas * 8}    @ {num_linhas} linhas * 8 bytes")
     asm.append("")
@@ -363,193 +403,230 @@ def _gerar_secao_data(asm: list, constantes: list, num_linhas: int):
     asm.append("")
 
 
-def _emitir_push_numero(asm: list, rotulo: str, valor_display: str):
-    """Emite instruções ARM para carregar um double da .data e empilhar."""
+# --- Emissão de instruções --------------------------------------------------
+
+def _emitir_push_numero(asm, rotulo, valor_display):
+    """Carrega um double da .data e empilha."""
     asm.append(f"    @ Push {valor_display}")
     asm.append(f"    ldr r0, ={rotulo}")
     asm.append(f"    vldr.f64 d0, [r0]")
     asm.append(f"    vpush {{d0}}")
 
 
-def _emitir_operador_basico(asm: list, operador: str):
-    """Emite instruções ARM para operação aritmética básica (+,-,*,/)."""
+def _emitir_operador_basico(asm, operador):
+    """Operação aritmética básica (+, -, *, /)."""
     instrucao, nome = _MAPA_INSTRUCOES_VFP[operador]
-
     asm.append(f"    @ Operador '{operador}' ({nome})")
-    asm.append(f"    vpop {{d1}}              @ d1 = operando do topo (B)")
-    asm.append(f"    vpop {{d0}}              @ d0 = segundo operando (A)")
+    asm.append(f"    vpop {{d1}}              @ d1 = B (topo)")
+    asm.append(f"    vpop {{d0}}              @ d0 = A (segundo)")
     asm.append(f"    {instrucao} d0, d0, d1  @ d0 = A {operador} B")
-    asm.append(f"    vpush {{d0}}             @ empilha resultado")
+    asm.append(f"    vpush {{d0}}")
 
 
-def _emitir_operador_pendente(asm: list, operador: str):
-    """Emite placeholder para operadores do(//, %, ^). Mantém pilha balanceada."""
-    nome = _OPERADORES_COMMIT3.get(operador, operador)
+def _emitir_divisao_inteira(asm):
+    """Divisão inteira (//) via truncamento: double -> int32 -> double."""
+    asm.append(f"    @ Operador '//' (divisão inteira)")
+    asm.append(f"    vpop {{d1}}              @ d1 = B")
+    asm.append(f"    vpop {{d0}}              @ d0 = A")
+    asm.append(f"    vdiv.f64 d0, d0, d1     @ d0 = A / B")
+    asm.append(f"    vcvt.s32.f64 s4, d0     @ s4 = truncar para int32")
+    asm.append(f"    vcvt.f64.s32 d0, s4     @ d0 = de volta para double")
+    asm.append(f"    vpush {{d0}}")
 
-    asm.append(f"    @ TODO []: Operador '{operador}' ({nome})")
-    asm.append(f"    vpop {{d1}}              @ d1 = operando do topo (B)")
-    asm.append(f"    vpop {{d0}}              @ d0 = segundo operando (A)")
-    asm.append(f"    @ Placeholder: mantém d0 inalterado (resultado incorreto)")
-    asm.append(f"    vpush {{d0}}             @ empilha placeholder")
+
+def _emitir_resto(asm):
+    """Resto/módulo (%) via fmod: A - trunc(A/B) * B."""
+    asm.append(f"    @ Operador '%' (resto via fmod)")
+    asm.append(f"    vpop {{d1}}              @ d1 = B")
+    asm.append(f"    vpop {{d0}}              @ d0 = A")
+    asm.append(f"    vdiv.f64 d2, d0, d1     @ d2 = A / B")
+    asm.append(f"    vcvt.s32.f64 s6, d2     @ s6 = trunc(A/B) como int32")
+    asm.append(f"    vcvt.f64.s32 d2, s6     @ d2 = trunc(A/B) como double")
+    asm.append(f"    vmul.f64 d2, d2, d1     @ d2 = trunc(A/B) * B")
+    asm.append(f"    vsub.f64 d0, d0, d2     @ d0 = A - trunc(A/B)*B = resto")
+    asm.append(f"    vpush {{d0}}")
 
 
-def _emitir_armazenar_resultado(asm: list, num_linha: int, idx_slot: int):
-    """Emite instruções para salvar o resultado da expressão no array 'resultados'."""
+def _emitir_potencia(asm, ctx):
+    """Potência (^) via loop de multiplicações. Expoente inteiro positivo."""
+    idx = ctx['label_counter']
+    ctx['label_counter'] = idx + 1
+
+    asm.append(f"    @ Operador '^' (potência por loop)")
+    asm.append(f"    vpop {{d1}}              @ d1 = B (expoente)")
+    asm.append(f"    vpop {{d0}}              @ d0 = A (base)")
+    asm.append(f"    vcvt.s32.f64 s4, d1     @ converter expoente para int32")
+    asm.append(f"    vmov r4, s4              @ r4 = expoente inteiro")
+    asm.append(f"    vmov.f64 d2, d0          @ d2 = base (backup)")
+    asm.append(f"    cmp r4, #0")
+    asm.append(f"    beq _pow_zero_{idx}")
+    asm.append(f"    cmp r4, #1")
+    asm.append(f"    beq _pow_fim_{idx}")
+    asm.append(f"    sub r4, r4, #1")
+    asm.append(f"_pow_loop_{idx}:")
+    asm.append(f"    vmul.f64 d0, d0, d2     @ d0 *= base")
+    asm.append(f"    subs r4, r4, #1")
+    asm.append(f"    bne _pow_loop_{idx}")
+    asm.append(f"    b _pow_fim_{idx}")
+    asm.append(f"_pow_zero_{idx}:")
+    asm.append(f"    ldr r0, =const_um")
+    asm.append(f"    vldr.f64 d0, [r0]       @ d0 = 1.0")
+    asm.append(f"_pow_fim_{idx}:")
+    asm.append(f"    vpush {{d0}}")
+
+
+def _emitir_armazenar_resultado(asm, num_linha, idx_slot):
+    """Salva o resultado no array 'resultados' e incrementa contador."""
     asm.append(f"    @ --- Armazenar resultado da linha {num_linha} (slot {idx_slot}) ---")
     asm.append(f"    vpop {{d0}}              @ d0 = resultado da expressão")
     asm.append(f"    ldr r1, =resultados")
-
     if idx_slot > 0:
         offset = idx_slot * 8
         asm.append(f"    add r1, r1, #{offset}      @ offset = slot {idx_slot} * 8 bytes")
-
     asm.append(f"    vstr.f64 d0, [r1]       @ salvar double no array")
-    asm.append(f"    @ Incrementar contador")
     asm.append(f"    ldr r2, =num_resultados")
     asm.append(f"    ldr r3, [r2]")
     asm.append(f"    add r3, r3, #1")
     asm.append(f"    str r3, [r2]")
 
 
-def _gerar_secao_text(asm: list, grupos: list, rotulos: dict):
-    """Gera a seção .text do Assembly ARM com o código executável."""
+# --- Caminhamento da AST para geração de código ----------------------------
+
+def _gerar_asm_nodo(asm, nodo, ctx):
+    """Gera assembly recursivamente percorrendo a AST."""
+
+    # Folha: Token literal (número)
+    if isinstance(nodo, Token):
+        if nodo.tipo == TIPO_NUMERO:
+            chave = (nodo.linha, nodo.coluna)
+            rotulo = ctx['rotulos'][chave]
+            _emitir_push_numero(asm, rotulo, nodo.valor)
+        return
+
+    tipo = nodo['tipo']
+
+    # Leitura de variável: (VARNAME) -> vldr + vpush
+    if tipo == 'LER_VAR':
+        nome = nodo['nome']
+        asm.append(f"    @ Ler variável {nome}")
+        asm.append(f"    ldr r0, =var_{nome}")
+        asm.append(f"    vldr.f64 d0, [r0]")
+        asm.append(f"    vpush {{d0}}")
+
+    # Escrita de variável: (V VARNAME) -> avaliar V, salvar, manter na pilha
+    elif tipo == 'ESCREVER_VAR':
+        _gerar_asm_nodo(asm, nodo['expr'], ctx)
+        nome = nodo['nome']
+        asm.append(f"    @ Salvar em variável {nome}")
+        asm.append(f"    vpop {{d0}}")
+        asm.append(f"    ldr r1, =var_{nome}")
+        asm.append(f"    vstr.f64 d0, [r1]")
+        asm.append(f"    vpush {{d0}}             @ manter na pilha como resultado")
+
+    # Leitura de histórico: (N RES) -> carregar resultado de N linhas atrás
+    elif tipo == 'LER_RES':
+        n_valor = nodo['n_valor']
+        if isinstance(n_valor, Token) and n_valor.tipo == TIPO_NUMERO:
+            n = int(n_valor.valor)
+            idx_alvo = ctx['idx_linha'] - n
+            offset = idx_alvo * 8
+            asm.append(f"    @ RES: resultado de {n} linha(s) atrás (slot {idx_alvo})")
+            asm.append(f"    ldr r0, =resultados")
+            if offset > 0:
+                asm.append(f"    add r0, r0, #{offset}")
+            asm.append(f"    vldr.f64 d0, [r0]")
+            asm.append(f"    vpush {{d0}}")
+
+    # Operação binária: (A B op)
+    elif tipo == 'OP_BIN':
+        _gerar_asm_nodo(asm, nodo['esq'], ctx)
+        _gerar_asm_nodo(asm, nodo['dir'], ctx)
+        op = nodo['op']
+        if op in _MAPA_INSTRUCOES_VFP:
+            _emitir_operador_basico(asm, op)
+        elif op == '//':
+            _emitir_divisao_inteira(asm)
+        elif op == '%':
+            _emitir_resto(asm)
+        elif op == '^':
+            _emitir_potencia(asm, ctx)
+
+
+# --- Geração da seção .text ------------------------------------------------
+
+def _gerar_secao_text(asm, grupos, rotulos):
+    """Gera a seção .text processando cada linha via parser + AST walker."""
     asm.append("@ Seção de código (.text)")
-    asm.append("@ Pilha RPN simulada via SP (vpush/vpop de registradores VFP)")
     asm.append(".section .text")
     asm.append(".global _start")
     asm.append("")
     asm.append("_start:")
 
-    linhas_completas   = 0
-    linhas_pendentes   = 0
+    ctx = {
+        'rotulos':       rotulos,
+        'label_counter': 0,
+    }
 
-    for idx_slot, (num_linha, grupo) in enumerate(grupos):
-        tem_pendente = False
-        stack_depth  = 0
+    for idx_slot, (num_linha, tokens_linha) in enumerate(grupos):
+        ctx['idx_linha'] = idx_slot
 
-        # Reconstruir expressão original para comentário
-        expressao_display = ""
-        for _, tok in grupo:
-            expressao_display += tok.valor + " "
-        expressao_display = expressao_display.strip()
-
+        expressao_display = " ".join(tok.valor for tok in tokens_linha)
         asm.append(f"")
         asm.append(f"@ --- Linha {num_linha}: {expressao_display} ---")
 
-        # Percorrer tokens da linha
-        for idx_tok, tok in grupo:
+        nodo, _ = _parsear_nodo(tokens_linha, 0)
+        _gerar_asm_nodo(asm, nodo, ctx)
+        _emitir_armazenar_resultado(asm, num_linha, idx_slot)
 
-            # Parênteses: ignorar (RPN puro usa pilha)
-            if tok.tipo == TIPO_ABRE_PAREN or tok.tipo == TIPO_FECHA_PAREN:
-                continue
-
-            # Número: carregar da .data e empilhar
-            elif tok.tipo == TIPO_NUMERO:
-                rotulo = rotulos[idx_tok]
-                _emitir_push_numero(asm, rotulo, tok.valor)
-                stack_depth += 1
-
-            # Operador: desempilhar, operar, empilhar resultado
-            elif tok.tipo == TIPO_OPERADOR:
-                if tok.valor in _MAPA_INSTRUCOES_VFP:
-                    _emitir_operador_basico(asm, tok.valor)
-                else:
-                    _emitir_operador_pendente(asm, tok.valor)
-                    tem_pendente = True
-                stack_depth -= 1
-
-            # Identificador: TODO para  (MEM, RES, variáveis)
-            elif tok.tipo == TIPO_IDENTIFICADOR:
-                tem_pendente = True
-                asm.append(f"    @ TODO : Identificador '{tok.valor}'")
-                asm.append(f"    @ (variável, MEM ou RES — nenhuma instrução emitida)")
-
-        # Fim da linha: armazenar resultado se pilha está correta
-        if stack_depth == 1 and not tem_pendente:
-            _emitir_armazenar_resultado(asm, num_linha, idx_slot)
-            linhas_completas += 1
-        elif stack_depth == 1 and tem_pendente:
-            asm.append(f"    @ [AVISO] Linha {num_linha}: resultado é placeholder (ops pendentes)")
-            _emitir_armazenar_resultado(asm, num_linha, idx_slot)
-            linhas_pendentes += 1
-        else:
-            asm.append(f"    @ [AVISO] Linha {num_linha}: resultado não armazenado")
-            asm.append(f"    @         (pilha desbalanceada: depth={stack_depth}, "
-                       f"identificadores pendentes)")
-            linhas_pendentes += 1
-
-    # Finalização do programa
     asm.append(f"")
-    asm.append(f"@ Fim do programa")
-    asm.append(f"@ Resumo: {linhas_completas} completas, {linhas_pendentes} pendentes ")
+    asm.append(f"@ --- Fim do programa ---")
     asm.append(f"@ Resultados no array 'resultados' na .data")
     asm.append(f"")
     asm.append(f"_halt:")
     asm.append(f"    b _halt                  @ Loop infinito (inspecionar no debugger)")
 
 
-def gerarAssembly(tokens: list) -> str:
-    """Função principal: traduz tokens em Assembly ARMv7."""
+# --- Orquestrador principal ------------------------------------------------
+
+def gerarAssembly(tokens):
+    """Traduz o fluxo de tokens em código Assembly ARMv7 completo."""
     asm = []
 
-    # Cabeçalho
     asm.append("@ Código Assembly ARMv7 — Gerado pelo Compilador RPN")
     asm.append("@ Alvo: CPUlator ARMv7 DE1-SoC (v16.1)")
     asm.append("@ Padrão: IEEE 754 double-precision (64-bit)")
-    asm.append("@ Instruções: VFP (vldr, vadd, vsub, vmul, vdiv .f64)")
+    asm.append("@ Instruções: VFP (vldr, vadd, vsub, vmul, vdiv, vcvt .f64)")
     asm.append("")
 
-    # Fase 1: Coletar constantes numéricas e gerar rótulos
-    rotulos    = {}
-    constantes = []
-    idx_const  = 0
+    rotulos, constantes = _coletar_constantes(tokens)
+    variaveis           = _coletar_variaveis(tokens)
+    grupos              = _agrupar_por_linha(tokens)
+    num_linhas          = len(grupos)
 
-    for i, tok in enumerate(tokens):
-        if tok.tipo == TIPO_NUMERO:
-            rotulo = f"const_{idx_const}"
-            rotulos[i] = rotulo
-
-            # Garantir formato double: "100" -> "100.0"
-            valor = tok.valor
-            if '.' not in valor:
-                valor = valor + ".0"
-
-            constantes.append((rotulo, valor))
-            idx_const += 1
-
-    # Fase 2: Agrupar tokens por linha
-    grupos     = _agrupar_por_linha(tokens)
-    num_linhas = len(grupos)
-
-    # Fase 3: Gerar seção .data
-    _gerar_secao_data(asm, constantes, num_linhas)
-
-    # Fase 4: Gerar seção .text
+    _gerar_secao_data(asm, constantes, variaveis, num_linhas)
     _gerar_secao_text(asm, grupos, rotulos)
 
     return '\n'.join(asm) + '\n'
 
 
-def salvarAssembly(codigo_asm: str, caminho: str):
+def salvarAssembly(codigo_asm, caminho):
     """Salva o código Assembly gerado em um arquivo .s."""
     with open(caminho, 'w', encoding='utf-8') as f:
         f.write(codigo_asm)
 
 
-def exibirResumoAssembly(codigo_asm: str, caminho: str):
+def exibirResumoAssembly(codigo_asm, caminho):
     """Exibe um resumo do Assembly gerado no console."""
     linhas_asm    = codigo_asm.split('\n')
     total_linhas  = len(linhas_asm)
     linhas_codigo = 0
     linhas_coment = 0
     linhas_vazio  = 0
-    count_vpush   = 0
-    count_vpop    = 0
-    count_vadd    = 0
-    count_vsub    = 0
-    count_vmul    = 0
-    count_vdiv    = 0
-    count_todo    = 0
+    contadores    = {
+        'vpush': 0, 'vpop': 0,
+        'vadd.f64': 0, 'vsub.f64': 0, 'vmul.f64': 0, 'vdiv.f64': 0,
+        'vcvt': 0, 'vstr.f64': 0, 'vldr.f64': 0,
+    }
 
     for l in linhas_asm:
         stripped = l.strip()
@@ -557,22 +634,11 @@ def exibirResumoAssembly(codigo_asm: str, caminho: str):
             linhas_vazio += 1
         elif stripped[0] == '@':
             linhas_coment += 1
-            if 'TODO' in stripped:
-                count_todo += 1
         else:
             linhas_codigo += 1
-            if 'vpush' in stripped:
-                count_vpush += 1
-            if 'vpop' in stripped:
-                count_vpop += 1
-            if 'vadd.f64' in stripped:
-                count_vadd += 1
-            if 'vsub.f64' in stripped:
-                count_vsub += 1
-            if 'vmul.f64' in stripped:
-                count_vmul += 1
-            if 'vdiv.f64' in stripped:
-                count_vdiv += 1
+            for chave in contadores:
+                if chave in stripped:
+                    contadores[chave] += 1
 
     print()
     print("=" * 65)
@@ -582,19 +648,20 @@ def exibirResumoAssembly(codigo_asm: str, caminho: str):
     print(f"  Total linhas: {total_linhas} ({linhas_codigo} código, "
           f"{linhas_coment} comentários, {linhas_vazio} vazias)")
     print(f"  Instruções VFP:")
-    print(f"    vpush:     {count_vpush:>4}  (empilhamentos)")
-    print(f"    vpop:      {count_vpop:>4}  (desempilhamentos)")
-    print(f"    vadd.f64:  {count_vadd:>4}  (somas)")
-    print(f"    vsub.f64:  {count_vsub:>4}  (subtrações)")
-    print(f"    vmul.f64:  {count_vmul:>4}  (multiplicações)")
-    print(f"    vdiv.f64:  {count_vdiv:>4}  (divisões)")
-    if count_todo > 0:
-        print(f"  Pendências:  {count_todo} marcadores TODO ")
+    print(f"    vpush:     {contadores['vpush']:>4}  (empilhamentos)")
+    print(f"    vpop:      {contadores['vpop']:>4}  (desempilhamentos)")
+    print(f"    vldr.f64:  {contadores['vldr.f64']:>4}  (carregamentos)")
+    print(f"    vstr.f64:  {contadores['vstr.f64']:>4}  (armazenamentos)")
+    print(f"    vadd.f64:  {contadores['vadd.f64']:>4}  (somas)")
+    print(f"    vsub.f64:  {contadores['vsub.f64']:>4}  (subtrações)")
+    print(f"    vmul.f64:  {contadores['vmul.f64']:>4}  (multiplicações)")
+    print(f"    vdiv.f64:  {contadores['vdiv.f64']:>4}  (divisões)")
+    print(f"    vcvt:      {contadores['vcvt']:>4}  (conversões int/float)")
     print("=" * 65)
     print()
 
 
-#  PONTO DE ENTRADA — Interface de Linha de Comando (CLI)
+#  PONTO DE ENTRADA
 
 def main():
     """Função principal."""
@@ -607,40 +674,38 @@ def main():
         sys.exit(1)
 
     caminho_entrada = sys.argv[1]
-
     nome_base    = os.path.splitext(os.path.basename(caminho_entrada))[0]
     caminho_json = f"{nome_base}_tokens.json"
     caminho_txt  = f"{nome_base}_tokens.txt"
     caminho_asm  = f"{nome_base}.s"
 
     try:
-        # Etapa 1: Leitura
         print(f"\n[1/4] Lendo arquivo: {caminho_entrada}")
         fonte = lerArquivo(caminho_entrada)
         print(f"      {len(fonte)} caracteres lidos, "
               f"{fonte.count(chr(10)) + 1} linha(s) detectada(s).")
 
-        # Etapa 2: Análise Léxica (AFD)
         print("[2/4] Executando análise léxica (AFD)...")
         tokens = parseExpressao(fonte)
         n_tokens = len(tokens) - 1
         print(f"      {n_tokens} tokens reconhecidos + EOF.")
 
-        # Etapa 3: Salvar tokens
         print(f"[3/4] Salvando tokens:")
         print(f"      → {caminho_json}")
         print(f"      → {caminho_txt}")
         salvarTokens(tokens, caminho_json, caminho_txt)
 
-        # Etapa 4: Gerar Assembly ARMv7
         print(f"[4/4] Gerando Assembly ARMv7 (IEEE 754 / VFP 64-bit)...")
         codigo_asm = gerarAssembly(tokens)
         salvarAssembly(codigo_asm, caminho_asm)
         print(f"      → {caminho_asm}")
 
-        # Exibir resumos
         exibirTokens(tokens)
         exibirResumoAssembly(codigo_asm, caminho_asm)
+
+        print("Compilação concluída com sucesso.")
+        print(f"    Copie '{caminho_asm}' para o CPUlator ARMv7 DE1-SoC")
+        print(f"    e execute para verificar os resultados no debugger.\n")
 
     except ErroLexico as e:
         print(f"\n✖ {e}", file=sys.stderr)
