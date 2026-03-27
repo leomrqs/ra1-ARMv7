@@ -1,0 +1,596 @@
+[
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 1,
+    "coluna": 1
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "100.0",
+    "linha": 1,
+    "coluna": 2
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "3.0",
+    "linha": 1,
+    "coluna": 8
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "//",
+    "linha": 1,
+    "coluna": 12
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 1,
+    "coluna": 14
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 2,
+    "coluna": 1
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "100.0",
+    "linha": 2,
+    "coluna": 2
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "3.0",
+    "linha": 2,
+    "coluna": 8
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "%",
+    "linha": 2,
+    "coluna": 12
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 2,
+    "coluna": 13
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 3,
+    "coluna": 1
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2.0",
+    "linha": 3,
+    "coluna": 2
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "8.0",
+    "linha": 3,
+    "coluna": 6
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "^",
+    "linha": 3,
+    "coluna": 10
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 3,
+    "coluna": 11
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 4,
+    "coluna": 1
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 4,
+    "coluna": 2
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 4,
+    "coluna": 3
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "100.0",
+    "linha": 4,
+    "coluna": 4
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "3.0",
+    "linha": 4,
+    "coluna": 10
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "//",
+    "linha": 4,
+    "coluna": 14
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 4,
+    "coluna": 16
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 4,
+    "coluna": 18
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2.0",
+    "linha": 4,
+    "coluna": 19
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "8.0",
+    "linha": 4,
+    "coluna": 23
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "^",
+    "linha": 4,
+    "coluna": 27
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 4,
+    "coluna": 28
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "+",
+    "linha": 4,
+    "coluna": 30
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 4,
+    "coluna": 31
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2.0",
+    "linha": 4,
+    "coluna": 33
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "/",
+    "linha": 4,
+    "coluna": 37
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 4,
+    "coluna": 38
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 5,
+    "coluna": 1
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 5,
+    "coluna": 2
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "45.5",
+    "linha": 5,
+    "coluna": 3
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2.5",
+    "linha": 5,
+    "coluna": 8
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "-",
+    "linha": 5,
+    "coluna": 12
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 5,
+    "coluna": 13
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "TEMPORARIO",
+    "linha": 5,
+    "coluna": 15
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 5,
+    "coluna": 25
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 6,
+    "coluna": 1
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 6,
+    "coluna": 2
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "TEMPORARIO",
+    "linha": 6,
+    "coluna": 3
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 6,
+    "coluna": 13
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "10.0",
+    "linha": 6,
+    "coluna": 15
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "/",
+    "linha": 6,
+    "coluna": 20
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 6,
+    "coluna": 21
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 7,
+    "coluna": 1
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2",
+    "linha": 7,
+    "coluna": 2
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "RES",
+    "linha": 7,
+    "coluna": 4
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 7,
+    "coluna": 7
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 8,
+    "coluna": 1
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 8,
+    "coluna": 2
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 8,
+    "coluna": 3
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2",
+    "linha": 8,
+    "coluna": 4
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "RES",
+    "linha": 8,
+    "coluna": 6
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 8,
+    "coluna": 9
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 8,
+    "coluna": 11
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "TEMPORARIO",
+    "linha": 8,
+    "coluna": 12
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 8,
+    "coluna": 22
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "*",
+    "linha": 8,
+    "coluna": 24
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 8,
+    "coluna": 25
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "0.5",
+    "linha": 8,
+    "coluna": 27
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "+",
+    "linha": 8,
+    "coluna": 31
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 8,
+    "coluna": 32
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 9,
+    "coluna": 1
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 9,
+    "coluna": 2
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 9,
+    "coluna": 3
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 9,
+    "coluna": 4
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "TEMPORARIO",
+    "linha": 9,
+    "coluna": 5
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 9,
+    "coluna": 15
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2.0",
+    "linha": 9,
+    "coluna": 17
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "*",
+    "linha": 9,
+    "coluna": 21
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 9,
+    "coluna": 22
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "3.0",
+    "linha": 9,
+    "coluna": 24
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "^",
+    "linha": 9,
+    "coluna": 28
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 9,
+    "coluna": 29
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "5.0",
+    "linha": 9,
+    "coluna": 31
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "%",
+    "linha": 9,
+    "coluna": 35
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 9,
+    "coluna": 36
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 10,
+    "coluna": 1
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 10,
+    "coluna": 2
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 10,
+    "coluna": 3
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "1",
+    "linha": 10,
+    "coluna": 4
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "RES",
+    "linha": 10,
+    "coluna": 6
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 10,
+    "coluna": 9
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 10,
+    "coluna": 11
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "2",
+    "linha": 10,
+    "coluna": 12
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "RES",
+    "linha": 10,
+    "coluna": 14
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 10,
+    "coluna": 17
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "+",
+    "linha": 10,
+    "coluna": 19
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 10,
+    "coluna": 20
+  },
+  {
+    "tipo": "ABRE_PAREN",
+    "valor": "(",
+    "linha": 10,
+    "coluna": 22
+  },
+  {
+    "tipo": "NUMERO",
+    "valor": "3",
+    "linha": 10,
+    "coluna": 23
+  },
+  {
+    "tipo": "IDENTIFICADOR",
+    "valor": "RES",
+    "linha": 10,
+    "coluna": 25
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 10,
+    "coluna": 28
+  },
+  {
+    "tipo": "OPERADOR",
+    "valor": "*",
+    "linha": 10,
+    "coluna": 30
+  },
+  {
+    "tipo": "FECHA_PAREN",
+    "valor": ")",
+    "linha": 10,
+    "coluna": 31
+  },
+  {
+    "tipo": "EOF",
+    "valor": "",
+    "linha": 10,
+    "coluna": 32
+  }
+]
